@@ -1,0 +1,107 @@
+{
+  "name": "fake-cursor",
+  "displayName": "fake-cursor",
+  "publisher": "fake-cursor",
+  "description": "A extension for regenerating Cursor device IDs",
+  "version": "0.1.4",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "fake-cursor.regenerateId",
+        "title": "Fake Cursor: Regenerate Device ID"
+      },
+      {
+        "command": "fake-cursor.readToken",
+        "title": "Fake Cursor: Read Token"
+      },
+      {
+        "command": "fake-cursor.setToken",
+        "title": "Fake Cursor: Set Token"
+      },
+      {
+        "command": "fake-cursor.showUsage",
+        "title": "Fake Cursor: Show Usage"
+      },
+      {
+        "command": "fake-cursor.patchMachineId",
+        "title": "Fake Cursor: Patch MachineId"
+      }
+
+    ],
+    "configuration": {
+      "title": "Fake Cursor",
+      "properties": {
+        "fake-cursor.storagePath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "自定义配置文件所在文件夹的路径. 留空则使用默认路径: \n\n- Windows: `%APPDATA%/Cursor/User/globalStorage`\n- macOS: `~/Library/Application Support/Cursor/User/globalStorage`\n- Linux: `~/.config/Cursor/User/globalStorage`"
+        },
+        "fake-cursor.usageMonitor": {
+          "type": "object",
+          "description": "使用情况监控器配置",
+          "properties": {
+            "checkInterval": {
+              "type": "number",
+              "default": 0,
+              "minimum": 0,
+              "maximum": 86400,
+              "description": "自动检查使用情况间隔 (秒) , 小于20不启用, 范围: 0-86400"
+            },
+            "usageRemainingThreshold": {
+              "type": "number",
+              "default": 0,
+              "minimum": 0,
+              "maximum": 5000,
+              "description": "当剩余次数小于此值时提醒用户, 默认为0"
+            },
+            "usageCountThreshold": {
+              "type": "number", 
+              "default": 5000,
+              "minimum": 0,
+              "maximum": 5000,
+              "description": "当使用次数大于此值时提醒用户, 默认为5000"
+            }
+          }
+        },
+        "fake-cursor.mainJsPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "自定义 Cursor main.js 文件路径。默认路径:\n\n- Windows: `%APPDATA%\\Local\\Programs\\cursor\\resources\\app\\out\\main.js`\n- macOS: `/Applications/Cursor.app/Contents/Resources/app/out/main.js`\n\n⚠️ 暂不支持Linux"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.80.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "eslint": "^9.16.0"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0",
+    "sql.js": "^1.8.0",
+    "uuid": "^11.0.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Angels-Ray/fake-rosrus.git"
+  },
+  "license": "CC-BY-NC-4.0"
+}

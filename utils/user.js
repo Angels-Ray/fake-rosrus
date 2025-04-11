@@ -1,7 +1,6 @@
 const fetch = require('node-fetch');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
-const { name_lower, name_capitalize } = require('./name.js');
 
 
 // 从JWT中提取用户ID
@@ -16,15 +15,15 @@ function extractUserIdFromJwt(token) {
 }
 
 /**
- * 获取 rosrus 的使用情况
- * @param {string} token - rosrus 的 JWT 令牌
- * @returns {Promise<Object>} - 包含 Rosrus 使用情况的 JSON 对象
+ * 获取 cursor 的使用情况
+ * @param {string} token - cursor 的 JWT 令牌
+ * @returns {Promise<Object>} - 包含 Cursor 使用情况的 JSON 对象
  */
 async function getUsage(token) {
-	const response = await fetch(`https://www.${name_lower}.com/api/usage`, {
+	const response = await fetch(`https://www.cursor.com/api/usage`, {
 		headers: {
 			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-			"Cookie": `Workos${name_capitalize}SessionToken=user_01OOOOOOOOOOOOOOOOOOOOOOOO%3A%3A${token}`
+			"Cookie": `WorkosCursorSessionToken=user_01OOOOOOOOOOOOOOOOOOOOOOOO%3A%3A${token}`
 		}
 	});
 	const data = await response.json();
@@ -38,11 +37,11 @@ async function getUsage(token) {
 
 /**
  * 获取完整的 Stripe 用户信息
- * @param {string} token - rosrus 的 JWT 令牌
+ * @param {string} token - cursor 的 JWT 令牌
  * @returns {Promise<Object>} - 包含 Stripe 用户信息的 JSON 对象
  */
 async function getFullStripeProfile(token) {
-	const response = await fetch(`https://api2.${name_lower}.sh/auth/full_stripe_profile`, {
+	const response = await fetch(`https://api2.cursor.sh/auth/full_stripe_profile`, {
 		headers: {
 
 			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",

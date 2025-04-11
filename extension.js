@@ -8,9 +8,10 @@ const {
 	getUsage,
 	getFullStripeProfile,
 	generateIds,
-} = require("./utils/user");
-const { updateMainJsContent } = require("./utils/mainjs");
-const { name_lower, name_capitalize } = require("./utils/name");
+} = require("./utils/user.js");
+const { updateMainJsContent } = require("./utils/mainjs.js");
+const { extensionName } = require("./utils/name.js");
+const { getCursorMainJsPath, getConfigPath } = require("./utils/cursorInfo.js");
 
 let usageTimer = null; // 定时器变量
 
@@ -19,27 +20,27 @@ let usageTimer = null; // 定时器变量
  * @param {vscode.ExtensionContext} context - VSCode扩展上下文
  */
 function activate(context) {
-	console.log(`Extension "fake-${name_lower}" is now active!`);
+	console.log(`Extension "${extensionName}" is now active!`);
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand(
-			`fake-${name_lower}.regenerateId`,
+			`${extensionName}.regenerateId`,
 			handleRegenerateId,
 		),
 		vscode.commands.registerCommand(
-			`fake-${name_lower}.readToken`,
+			`${extensionName}.readToken`,
 			handleReadToken,
 		),
 		vscode.commands.registerCommand(
-			`fake-${name_lower}.setToken`,
+			`${extensionName}.setToken`,
 			handleSetToken,
 		),
 		vscode.commands.registerCommand(
-			`fake-${name_lower}.showUsage`,
+			`${extensionName}.showUsage`,
 			handleUsage,
 		),
 		vscode.commands.registerCommand(
-			`fake-${name_lower}.patchMachineId`,
+			`${extensionName}.patchMachineId`,
 			handlePatchMachineId,
 		),
 	);
@@ -50,103 +51,10 @@ function activate(context) {
 	// 监听配置变化
 	context.subscriptions.push(
 		vscode.workspace.onDidChangeConfiguration((e) => {
-			if (e.affectsConfiguration(`fake-${name_lower}.usageMonitor`)) {
+			if (e.affectsConfiguration(`${extensionName}.usageMonitor`)) {
 				setupTimer(context);
 			}
 		}),
-	);
-}
-
-const pathExists = async (path) => {
-	try {
-		await fs.access(path);
-		return true;
-	} catch {
-		return false;
-	}
-};
-
-/**
- * 验证存储文件和数据库路径
- * @param {string} storagePath - 存储文件路径
- * @param {string} dbPath - 数据库文件路径
- * @returns {Promise<{storagePath: string, dbPath: string}>} 返回验证后的路径
- */
-async function validatePaths(storagePath, dbPath) {
-	async function checkPaths(storage, db) {
-		const storageExists = await pathExists(storage);
-		const dbExists = await pathExists(db);
-
-		if (!storageExists || !dbExists) {
-			const missingFiles = [
-				!storageExists && "storage.json",
-				!dbExists && "state.vscdb",
-			].filter(Boolean).join(" 和 ");
-			throw new Error(`所选文件夹中缺少: ${missingFiles}`);
-		}
-
-		return { storagePath: storage, dbPath: db };
-	}
-
-	try {
-		return await checkPaths(storagePath, dbPath);
-	} catch (error) {
-		const choice = await vscode.window.showInformationMessage(
-			error.message,
-			"手动选择文件夹",
-		);
-
-		if (choice !== "手动选择文件夹") {
-			throw new Error("操作已取消");
-		}
-
-		const fileUri = await vscode.window.showOpenDialog({
-			canSelectFiles: false,
-			canSelectFolders: true,
-			canSelectMany: false,
-			title: "选择配置文件所在文件夹",
-		});
-
-		if (!fileUri?.length) {
-			throw new Error("未选择文件夹");
-		}
-
-		const selectedDir = fileUri[0].fsPath;
-		const newPaths = {
-			storagePath: path.join(selectedDir, "storage.json"),
-			dbPath: path.join(selectedDir, "state.vscdb"),
-		};
-
-		// 验证新选择的文件夹
-		return await checkPaths(newPaths.storagePath, newPaths.dbPath);
-	}
-}
-
-/**
- * 获取存储文件的路径
- * @returns {Promise<{storagePath: string, dbPath: string}>} 返回存储文件和数据库的路径
- */
-async function getConfigPath() {
-	const config = vscode.workspace.getConfiguration(`fake-${name_lower}`);
-	const customPath = config.get("storagePath");
-
-	const basePath = customPath || path.join(
-		os.homedir(),
-		...{
-			"win32": ["AppData", "Roaming"],
-			"darwin": ["Library", "Application Support"],
-			"linux": [".config"],
-		}[os.platform()] || (() => {
-			throw new Error("不支持的操作系统");
-		})(),
-		name_capitalize,
-		"User",
-		"globalStorage",
-	);
-
-	return validatePaths(
-		path.join(basePath, "storage.json"),
-		path.join(basePath, "state.vscdb"),
 	);
 }
 
@@ -209,18 +117,18 @@ async function updateDeviceIds(storagePath, dbPath, accessToken) {
 
 		// 处理认证信息和会员类型
 		const updates = [
-			[`${name_lower}Auth/accessToken`, accessToken || ""],
-			[`${name_lower}Auth/refreshToken`, accessToken || ""],
+			['cursorAuth/accessToken', accessToken || ""],
+			['cursorAuth/refreshToken', accessToken || ""],
 			[
-				`${name_lower}Auth/cachedEmail`,
-				accessToken ? (userId || `admin@${name_lower}.sh`) : "",
+				'cursorAuth/cachedEmail',
+				accessToken ? (userId || 'admin@cursor.sh') : "",
 			],
-			[`${name_lower}Auth/cachedSignUpType`, accessToken ? "Auth_0" : ""],
-			[`${name_lower}Auth/stripeMembershipType`, accessToken ? "pro" : "free"],
+			['cursorAuth/cachedSignUpType', accessToken ? "Auth_0" : ""],
+			['cursorAuth/stripeMembershipType', accessToken ? "pro" : "free"],
 		];
 
 		updates.forEach(([key, value]) => {
-            const exists = db.exec(`SELECT 1 FROM ItemTable WHERE key = ?`, [key]);
+            const exists = db.exec("SELECT 1 FROM ItemTable WHERE key = ?", [key]);
             if (exists.length === 0) {
                 db.run("INSERT INTO ItemTable (key, value) VALUES (?, ?)", [key, value]);
             } else {
@@ -233,8 +141,8 @@ async function updateDeviceIds(storagePath, dbPath, accessToken) {
 		await fs.writeFile(dbPath, Buffer.from(data));
 
 		result += accessToken
-			? "✅ 数据库更新成功\n✅ Token已更新\n✅ 会员类型已设置为 pro"
-			: "✅ 数据库更新成功\n✅ 认证信息已清空\n✅ 会员类型已设置为 free";
+			? "✅ 数据库更新成功\n✅ Token已更新\n"
+			: "✅ 数据库更新成功\n✅ 认证信息已清空\n✅ 请启动后重新登录";
 	} catch (error) {
 		console.error("更新失败:", error);
 		result += "❌ 更新失败: " + error.message;
@@ -248,7 +156,7 @@ async function updateDeviceIds(storagePath, dbPath, accessToken) {
 				)
 				.join("\n\n") +
 				"\n\n数据库状态:\n" + result +
-				`\n\n✅ 操作已完成, ${name_capitalize} 将立即退出`,
+				"\n\n✅ 操作已完成, Cursor 将立即退出",
 			{ modal: true },
 		).then(() => {
 			// 使用 process.exit() 强制退出
@@ -272,13 +180,13 @@ async function getTokenFromDb() {
 
 	try {
 		const result = db.exec(
-			`SELECT value FROM ItemTable WHERE key = "${name_lower}Auth/accessToken"`,
+			'SELECT value FROM ItemTable WHERE key = "cursorAuth/accessToken"',
 		);
 		if (
 			!result.length || !result[0].values.length ||
 			!result[0].values[0][0]
 		) {
-			throw new Error("未找到 Access Token");
+			throw new Error("未找到 Access Token, 检查是否未登录");
 		}
 		return result[0].values[0][0];
 	} finally {
@@ -291,7 +199,7 @@ async function getTokenFromDb() {
  */
 function setupTimer(context) {
 	const config = vscode.workspace.getConfiguration(
-		`fake-${name_lower}.usageMonitor`,
+		`${extensionName}.usageMonitor`,
 	);
 	const interval = Math.floor(config.get("checkInterval") ?? 0);
 	const remainingLimit = Math.floor(
@@ -324,7 +232,7 @@ function setupTimer(context) {
 
 			if (alerts.length > 0) {
 				vscode.window.showWarningMessage(
-					`fake-${name_lower}: ${alerts.join(", ")}`,
+					`${extensionName}: ${alerts.join(", ")}`,
 				);
 				await handleUsage();
 			}
@@ -461,17 +369,17 @@ async function handleUsage() {
 async function handlePatchMachineId() {
 	try {
 		const confirm = await vscode.window.showWarningMessage(
-			`即将修补 ${name_capitalize} 机器码获取逻辑`,
+			"即将修补 Cursor 机器码获取逻辑",
 			{
 				modal: true,
-				detail: `功能: 修补 ${name_capitalize} 0.45.x 版本机器码的获取方式\n\n` +
-					`⚠️ 注意事项:\n` +
-					`  1. 此操作将修补 ${name_capitalize} 的 main.js 文件, 仅需执行一次\n` +
-					`  2. 修补后需要重启 ${name_capitalize} 才能生效\n` +
-					`  3. 操作不可逆，建议提前备份文件\n` +
-					`  4. 直接覆盖安装可恢复\n` +
-					`  5. 升级后需要再次执行\n` +
-					`\n确认要继续吗? `,
+				detail: "功能: 修补 Cursor 0.45.x 版本机器码的获取方式\n\n" +
+					"⚠️ 注意事项:\n" +
+					"  1. 此操作将修补 Cursor 的 main.js 文件, 仅需执行一次\n" +
+					"  2. 修补后需要重启 Cursor 才能生效\n" +
+					"  3. 操作不可逆，建议提前备份文件\n" +
+					"  4. 直接覆盖安装可恢复\n" +
+					"  5. 升级后需要再次执行\n" +
+					"\n确认要继续吗? ",
 			},
 			"继续修补",
 		);
@@ -480,64 +388,10 @@ async function handlePatchMachineId() {
 			return;
 		}
 
-		const config = vscode.workspace.getConfiguration(`fake-${name_lower}`);
-		const customPath = config.get("mainJsPath");
-
-		let filePath;
-		if (!customPath) {
-			const platform = os.platform();
-			if (platform === "linux") {
-				throw new Error("Linux 系统不支持修补 main.js");
-			}
-
-			filePath = platform === "darwin"
-				? `/Applications/${name_capitalize}.app/Contents/Resources/app/out/main.js`
-				: path.join(
-					os.homedir(),
-					"AppData",
-					"Local",
-					"Programs",
-					name_lower,
-					"resources",
-					"app",
-					"out",
-					"main.js",
-				);
-		} else {
-			filePath = customPath;
-		}
-
-		if (!await pathExists(filePath)) {
-			const choice = await vscode.window.showInformationMessage(
-				"未找到 main.js 文件",
-				"手动选择文件",
-			);
-
-			if (choice !== "手动选择文件") {
-				throw new Error("操作已取消");
-			}
-
-			const fileUri = await vscode.window.showOpenDialog({
-				canSelectFiles: true,
-				canSelectFolders: false,
-				canSelectMany: false,
-				filters: {
-					"JavaScript": ["js"],
-				},
-				title: "选择 main.js 文件",
-			});
-
-			if (!fileUri?.length) {
-				throw new Error("未选择文件");
-			}
-
-			filePath = fileUri[0].fsPath;
-		}
-
-		await updateMainJsContent(filePath);
+		await updateMainJsContent(await getCursorMainJsPath());
 
 		await vscode.window.showInformationMessage(
-			`✅ main.js 修补成功，${name_capitalize} 将立即退出`,
+			"✅ main.js 修补成功, Cursor 将立即退出",
 			{ modal: true }
 		).then(() => {
 			vscode.commands.executeCommand('workbench.action.quit').then(() => {

@@ -5,4 +5,3 @@ package-lock.json
 build/
 tmp/
 token.txt
-package.json

@@ -1,8 +1,9 @@
-const hex = "437572736f72";
-const name_lower = Buffer.from(hex, 'hex').toString('utf8').toLowerCase();
-const name_capitalize = Buffer.from(hex, 'hex').toString('utf8');
+const nameCapitalize = 'Cursor'
+const nameLower = nameCapitalize.toLowerCase()
+const extensionName = `fake-${nameLower}`
 
 module.exports = {
-	name_lower,
-	name_capitalize,
+	nameLower,
+	nameCapitalize,
+	extensionName
 };
